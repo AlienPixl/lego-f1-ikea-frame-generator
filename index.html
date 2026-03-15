@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LEGO F1 IKEA Frame Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1e1e1e;
+      --border: #2a2a2a;
+      --accent: #e10600;
+      --accent2: #ff4d00;
+      --text: #f0f0f0;
+      --text-muted: #666;
+      --text-dim: #999;
+      --slot-w: 110px;
+      --slot-h: 220px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column;
+      user-select: none;
+    }
+
+    header {
+      padding: 12px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 16px;
+      flex-shrink: 0;
+    }
+    header .logo {
+      font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    header .subtitle { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+    header .divider { width: 1px; height: 24px; background: var(--border); }
+    header .hint { font-size: 10px; color: var(--text-muted); }
+
+    main { flex: 1; display: flex; flex-direction: column; }
+
+    .step-badge {
+      width: 20px; height: 20px; background: var(--accent); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0; color: white;
+    }
+
+    /* 1. Size toggle */
+    .top-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
+    }
+    .size-toggle {
+      display: flex; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+    }
+    .size-btn {
+      padding: 6px 20px; font-size: 11px; font-weight: 600;
+      letter-spacing: 0.5px; cursor: pointer; border: none;
+      background: transparent; color: var(--text-muted);
+      transition: all 0.15s; font-family: 'Inter', sans-serif;
+    }
+    .size-btn.active { background: var(--accent); color: white; }
+    .frame-label { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+
+    /* 2. Canvas */
+    .canvas-wrapper { display: flex; flex-direction: column; }
+    .canvas-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 16px;
+      font-size: 10px; font-weight: 600; color: var(--text-muted);
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .canvas-area {
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px; min-height: 280px;
+    }
+
+    .frame {
+      background: #1a1a1a; border: 3px solid #333; border-radius: 4px;
+      display: grid; flex-shrink: 0;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 0 0 6px #0f0f0f;
+    }
+    .frame.size-25 { grid-template-columns: var(--slot-w) var(--slot-w); grid-template-rows: var(--slot-h); }
+    .frame.size-50 { grid-template-columns: repeat(4, var(--slot-w)); grid-template-rows: var(--slot-h) var(--slot-h); }
+
+    .slot {
+      width: var(--slot-w); height: var(--slot-h);
+      border: 1px dashed #2a2a2a;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; background: #111;
+    }
+    .slot:hover { border-color: var(--accent); background: #1a1a1a; }
+    .slot.active { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+    .slot.filled { border-style: solid; border-color: #333; }
+    .slot-bg { position: absolute; inset: 0; }
+    .slot-bg img { width: 100%; height: 100%; object-fit: cover; }
+    .slot-empty-icon { font-size: 20px; opacity: 0.3; }
+    .slot-empty-text { font-size: 7px; color: var(--text-muted); margin-top: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .slot-number {
+      position: absolute; top: 4px; left: 4px;
+      width: 15px; height: 15px; background: rgba(0,0,0,0.7);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 7px; font-weight: 700; color: var(--text-muted);
+    }
+    .slot-remove {
+      position: absolute; top: 4px; right: 4px;
+      width: 15px; height: 15px; background: rgba(225,6,0,0.8);
+      border-radius: 50%; display: none; align-items: center; justify-content: center;
+      font-size: 8px; cursor: pointer; z-index: 10;
+    }
+    .slot.filled:hover .slot-remove { display: flex; }
+
+    /* 3. Team bar */
+    .team-section { background: var(--surface); border-top: 1px solid var(--border); }
+    .team-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 16px;
+      font-size: 10px; font-weight: 600; color: var(--text-muted);
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .team-bar {
+      display: flex; gap: 8px; padding: 10px 16px; align-items: flex-start;
+      justify-content: center; flex-wrap: wrap; overflow-x: auto;
+    }
+    @media (max-width: 800px) {
+      .team-bar { flex-wrap: nowrap; justify-content: flex-start; }
+    }
+    .team-bar::-webkit-scrollbar { height: 3px; }
+    .team-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .team-card {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      padding: 8px 10px; border-radius: 7px; cursor: pointer;
+      transition: all 0.15s; border: 1px solid transparent;
+      flex-shrink: 0; position: relative; width: 80px;
+    }
+    .team-card:hover { background: var(--surface2); border-color: var(--border); }
+    .team-card.selected { background: var(--surface2); border-color: var(--accent); }
+    .team-card.selected::after {
+      content: '✓'; position: absolute; top: 3px; right: 5px;
+      color: var(--accent); font-size: 9px; font-weight: 700;
+    }
+    .team-preview {
+      width: 40px; height: 80px; border-radius: 3px;
+      background: var(--surface2); border: 1px solid var(--border);
+      overflow: hidden; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .team-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .team-color-bar { width: 40px; height: 2px; border-radius: 1px; }
+    .team-name { font-size: 8px; font-weight: 600; text-align: center; color: var(--text-dim); white-space: normal; overflow: hidden; width: 100%; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+    /* 4. Export */
+    .export-bar {
+      display: flex; align-items: center; gap: 16px; padding: 8px 16px;
+      border-top: 1px solid var(--border); background: var(--surface);
+    }
+    .btn-export {
+      padding: 9px 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 7px; color: white;
+      font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      cursor: pointer; font-family: 'Bebas Neue', sans-serif;
+      transition: all 0.2s; flex-shrink: 0;
+    }
+    .btn-export:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(225,6,0,0.4); }
+    .btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
+    .slot-summary { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; }
+    .slot-tag { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; }
+    .slot-tag.filled { background: rgba(74,222,128,0.15); color: #4ade80; }
+    .slot-tag.empty { background: var(--surface2); color: var(--text-muted); }
+    .export-info { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+    .export-info strong { color: var(--text-dim); }
+
+    /* Disclaimer */
+    .disclaimer-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    .disclaimer-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 32px; max-width: 480px; width: 90%;
+    }
+    .disclaimer-box h2 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; margin-bottom: 14px; color: #ffa500; }
+    .disclaimer-box p { font-size: 11px; color: var(--text-muted); line-height: 1.7; margin-bottom: 8px; }
+    .disclaimer-box button {
+      margin-top: 16px; width: 100%; padding: 11px;
+      background: var(--accent); border: none; border-radius: 7px;
+      color: white; font-size: 13px; font-weight: 700; cursor: pointer;
+      font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px;
+    }
+
+    .toast {
+      position: fixed; bottom: 20px; right: 20px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 7px; padding: 10px 14px; font-size: 12px; display: none;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 100;
+    }
+    .toast.show { display: block; animation: slideIn 0.2s ease; }
+    .toast.error { border-color: var(--accent); color: #ff6b6b; }
+    .toast.success { border-color: #4ade80; color: #4ade80; }
+    @keyframes slideIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+<body>
+
+<!-- Disclaimer -->
+<div class="disclaimer-overlay" id="disclaimerOverlay">
+  <div class="disclaimer-box">
+    <h2>⚠️ Unofficial Fan-Made Project</h2>
+    <p>This app is not affiliated with, endorsed by, or connected to Formula 1, any F1 team, the LEGO Group, or IKEA.</p>
+    <p>All F1 team names, logos, and trademarks are the property of their respective owners. LEGO® is a trademark of the LEGO Group. IKEA® and SANNAHED™ are trademarks of Inter IKEA Systems B.V.</p>
+    <p>This project is for personal use only and may not be sold or used for commercial purposes.</p>
+    <button onclick="document.getElementById('disclaimerOverlay').style.display='none'">I Understand</button>
+  </div>
+</div>
+
+<header>
+  <div>
+    <div class="logo">LEGO F1 IKEA Frame Generator</div>
+    <div class="subtitle">Speed Champions × IKEA SANNAHED</div>
+  </div>
+  <div class="divider"></div>
+  <div class="hint">Select frame size → click a slot → pick a team → export</div>
+  <div style="margin-left:auto; font-size:10px; color:var(--text-muted);">
+    <a href="https://github.com/AlienPixl/lego-f1-ikea-frame-generator/releases" target="_blank" style="color:var(--text-muted); text-decoration:none;">v<span id="versionLabel"></span></a>
+  </div>
+</header>
+
+<main>
+
+  <!-- 1. Frame size -->
+  <div class="top-bar">
+    <span class="step-badge">1</span>
+    <div class="size-toggle">
+      <button class="size-btn active" onclick="setFrameSize(25)">25 × 25 cm</button>
+      <button class="size-btn" onclick="setFrameSize(50)">50 × 50 cm</button>
+    </div>
+    <div class="frame-label" id="frameLabel">IKEA SANNAHED — 25 × 25 cm — 2 slots</div>
+  </div>
+
+  <!-- 2. Select slot -->
+  <div class="canvas-wrapper">
+    <div class="canvas-header">
+      <span class="step-badge">2</span> Select a slot
+    </div>
+    <div class="canvas-area">
+      <div class="frame size-25" id="frameCanvas"></div>
+    </div>
+  </div>
+
+  <!-- 3. Pick team -->
+  <div class="team-section">
+    <div class="team-header">
+      <span class="step-badge">3</span> Pick a team
+    </div>
+    <div class="team-bar" id="teamBar">
+      <div style="color: var(--text-muted); font-size:11px;">Loading teams...</div>
+    </div>
+  </div>
+
+  <!-- 4. Export -->
+  <div class="export-bar">
+    <span class="step-badge">4</span>
+    <button class="btn-export" id="exportBtn" onclick="exportPDF()" disabled>⬇ Export PDF</button>
+    <div class="slot-summary" id="slotSummary"></div>
+    <div class="export-info" id="exportInfo">Fill all slots to enable export.</div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const VERSION = '1.0.0';
+const REPO_RAW = 'https://raw.githubusercontent.com/AlienPixl/lego-f1-ikea-frame-generator/main';
+
+const TEAMS = [
+  { id: 'red-bull',     name: 'Red Bull Racing',       color: '#3671C6', emoji: '🔵' },
+  { id: 'ferrari',      name: 'Scuderia Ferrari',       color: '#E8002D', emoji: '🔴' },
+  { id: 'mercedes',     name: 'Mercedes-AMG Petronas',  color: '#27F4D2', emoji: '🩵' },
+  { id: 'mclaren',      name: 'McLaren F1 Team',        color: '#FF8000', emoji: '🟠' },
+  { id: 'aston-martin', name: 'Aston Martin Aramco',    color: '#229971', emoji: '🟢' },
+  { id: 'alpine',       name: 'BWT Alpine F1',          color: '#FF87BC', emoji: '🩷' },
+  { id: 'haas',         name: 'MoneyGram Haas F1',      color: '#B6BABD', emoji: '⚪' },
+  { id: 'williams',     name: 'Williams Racing',        color: '#64C4FF', emoji: '🔷' },
+  { id: 'rb',           name: 'Visa Cash App RB',       color: '#6692FF', emoji: '🟣' },
+  { id: 'kick-sauber',  name: 'Kick Sauber',            color: '#52E252', emoji: '💚' },
+  { id: 'audi',         name: 'Audi Revolut F1 Team',   color: '#C0C0C0', emoji: '⚪' },
+  { id: 'academy',      name: 'F1 Academy',             color: '#FFD700', emoji: '🟡' },
+];
+
+let frameSize = 25;
+let slotCount = 2;
+let slots = [null, null];
+let activeSlot = 0;
+
+function init() {
+  document.getElementById('versionLabel').textContent = VERSION;
+  renderTeamBar();
+  renderFrame();
+  updateExportBar();
+}
+
+function renderTeamBar() {
+  const container = document.getElementById('teamBar');
+  let html = '';
+  for (const team of TEAMS) {
+    const isSelected = slots[activeSlot] === team.id;
+    html += `
+      <div class="team-card ${isSelected ? 'selected' : ''}"
+           onclick="selectTeam('${team.id}')"
+           id="card-${team.id}">
+        <div class="team-preview">
+          <img src="${REPO_RAW}/assets/previews/${team.id}.png"
+               onerror="this.parentElement.innerHTML='<span style=\\'font-size:14px\\'>${team.emoji}</span>'"
+               style="width:100%;height:100%;object-fit:cover"/>
+        </div>
+        <div class="team-color-bar" style="background:${team.color}"></div>
+        <div class="team-name">${team.name}</div>
+      </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function setFrameSize(size) {
+  frameSize = size;
+  slotCount = size === 25 ? 2 : 8;
+  slots = Array(slotCount).fill(null);
+  activeSlot = 0;
+
+  document.querySelectorAll('.size-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && size === 25) || (i === 1 && size === 50));
+  });
+  document.getElementById('frameCanvas').className = `frame size-${size}`;
+  document.getElementById('frameLabel').textContent =
+    size === 25 ? 'IKEA SANNAHED — 25 × 25 cm — 2 slots'
+                : 'IKEA SANNAHED — 50 × 50 cm — 8 slots';
+
+  renderFrame();
+  renderTeamBar();
+  updateExportBar();
+}
+
+function renderFrame() {
+  const frame = document.getElementById('frameCanvas');
+  frame.innerHTML = '';
+  for (let i = 0; i < slotCount; i++) {
+    const team = slots[i] ? TEAMS.find(t => t.id === slots[i]) : null;
+    const isActive = i === activeSlot;
+    const slot = document.createElement('div');
+    slot.className = `slot ${isActive ? 'active' : ''} ${team ? 'filled' : ''}`;
+    slot.onclick = () => selectSlot(i);
+    slot.innerHTML = `
+      <div class="slot-number">${i + 1}</div>
+      <div class="slot-bg">
+        ${team ? `<img src="${REPO_RAW}/assets/previews/${team.id}.png" onerror="this.style.display='none'" />` : ''}
+      </div>
+      ${team ? `<div class="slot-remove" onclick="removeSlot(event,${i})">✕</div>` : ''}
+      ${!team ? `<div class="slot-empty-icon">＋</div><div class="slot-empty-text">Click to select</div>` : ''}
+    `;
+    frame.appendChild(slot);
+  }
+}
+
+function selectSlot(index) {
+  activeSlot = index;
+  renderFrame();
+  renderTeamBar();
+}
+
+function selectTeam(teamId) {
+  slots[activeSlot] = teamId;
+  for (let i = 0; i < slotCount; i++) {
+    const next = (activeSlot + 1 + i) % slotCount;
+    if (slots[next] === null) { activeSlot = next; break; }
+  }
+  renderFrame();
+  renderTeamBar();
+  updateExportBar();
+}
+
+function removeSlot(e, index) {
+  e.stopPropagation();
+  slots[index] = null;
+  activeSlot = index;
+  renderFrame();
+  renderTeamBar();
+  updateExportBar();
+}
+
+function updateExportBar() {
+  const summary = document.getElementById('slotSummary');
+  const btn = document.getElementById('exportBtn');
+  const info = document.getElementById('exportInfo');
+  const filledCount = slots.filter(Boolean).length;
+  const allFilled = filledCount === slotCount;
+
+  summary.innerHTML = slots.map((id, i) => {
+    const team = id ? TEAMS.find(t => t.id === id) : null;
+    return `<div class="slot-tag ${team ? 'filled' : 'empty'}">${team ? team.name.split(' ')[0] : `Slot ${i+1}`}</div>`;
+  }).join('');
+
+  btn.disabled = !allFilled;
+  info.innerHTML = allFilled
+    ? `Ready — <strong>${frameSize}×${frameSize} cm</strong>`
+    : `<strong>${filledCount}/${slotCount}</strong> slots filled`;
+}
+
+async function exportPDF() {
+  const btn = document.getElementById('exportBtn');
+  btn.textContent = '⏳ Downloading PDFs...';
+  btn.disabled = true;
+
+  try {
+    const { PDFDocument, pushGraphicsState, popGraphicsState, moveTo, lineTo, closePath, clip, endPath, rgb } = PDFLib;
+
+    const cols = frameSize === 25 ? 2 : 4;
+    const rows = frameSize === 25 ? 1 : 2;
+
+    // Load first PDF to get dimensions
+    const firstId = slots.find(Boolean);
+    const firstBytes = await fetch(`${REPO_RAW}/assets/teams/${firstId}.pdf`).then(r => r.arrayBuffer());
+    const firstPdf = await PDFDocument.load(firstBytes);
+    const firstPage = firstPdf.getPage(0);
+
+    const srcW = firstPage.getWidth();
+    const srcH = firstPage.getHeight();
+    const trimBox  = firstPage.getTrimBox();
+    const bleedBox = firstPage.getBleedBox();
+
+    const slotW = trimBox.width;
+    const slotH = trimBox.height;
+    const bleed = trimBox.x - bleedBox.x;
+    const trimOffX = trimBox.x;
+    const trimOffY = trimBox.y;
+
+    const mm = v => (v / 25.4) * 72;
+    const cmGap = mm(2);
+    const cmLen = mm(5);
+    const margin = bleed + cmGap + cmLen;
+
+    const pageW = cols * slotW + 2 * margin;
+    const pageH = rows * slotH + 2 * margin;
+
+    const outputPdf = await PDFDocument.create();
+    const page = outputPdf.addPage([pageW, pageH]);
+
+    btn.textContent = '⏳ Generating PDF...';
+
+    for (let i = 0; i < slots.length; i++) {
+      const teamId = slots[i];
+      if (!teamId) continue;
+
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+
+      const isLeftCol   = col === 0;
+      const isRightCol  = col === cols - 1;
+      const isTopRow    = row === 0;
+      const isBottomRow = row === rows - 1;
+
+      const slotX = margin + col * slotW;
+      const slotY = margin + (rows - 1 - row) * slotH;
+      const drawX = slotX - trimOffX;
+      const drawY = slotY - trimOffY;
+
+      const clipLeft   = isLeftCol   ? slotX - bleed : slotX;
+      const clipBottom = isBottomRow ? slotY - bleed : slotY;
+      const clipRight  = isRightCol  ? slotX + slotW + bleed : slotX + slotW;
+      const clipTop    = isTopRow    ? slotY + slotH + bleed : slotY + slotH;
+
+      const pdfBytes = await fetch(`${REPO_RAW}/assets/teams/${teamId}.pdf`).then(r => r.arrayBuffer());
+      const srcPdf = await PDFDocument.load(pdfBytes);
+      const [embeddedPage] = await outputPdf.embedPdf(srcPdf, [0]);
+
+      page.pushOperators(
+        pushGraphicsState(),
+        moveTo(clipLeft, clipBottom),
+        lineTo(clipRight, clipBottom),
+        lineTo(clipRight, clipTop),
+        lineTo(clipLeft, clipTop),
+        closePath(),
+        clip(),
+        endPath(),
+      );
+
+      page.drawPage(embeddedPage, { x: drawX, y: drawY, width: srcW, height: srcH });
+      page.pushOperators(popGraphicsState());
+    }
+
+    // Crop marks
+    const black = rgb(0, 0, 0);
+    const left   = margin;
+    const right  = margin + cols * slotW;
+    const bottom = margin;
+    const top    = margin + rows * slotH;
+
+    for (const { cx, cy, hDir, vDir } of [
+      { cx: left,  cy: bottom, hDir: -1, vDir: -1 },
+      { cx: right, cy: bottom, hDir:  1, vDir: -1 },
+      { cx: left,  cy: top,    hDir: -1, vDir:  1 },
+      { cx: right, cy: top,    hDir:  1, vDir:  1 },
+    ]) {
+      const hStart = cx + hDir * bleed + hDir * cmGap;
+      page.drawLine({ start: { x: hStart, y: cy }, end: { x: hStart + hDir * cmLen, y: cy }, color: black, thickness: 1 });
+      const vStart = cy + vDir * bleed + vDir * cmGap;
+      page.drawLine({ start: { x: cx, y: vStart }, end: { x: cx, y: vStart + vDir * cmLen }, color: black, thickness: 1 });
+    }
+
+    // Download
+    const pdfBytes = await outputPdf.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `f1-frame-${frameSize}x${frameSize}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showToast('✓ PDF downloaded!', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Export failed: ' + err.message, 'error');
+  }
+
+  btn.textContent = '⬇ Export PDF';
+  updateExportBar();
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+init();
+</script>
+</body>
+</html>
