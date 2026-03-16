@@ -1,0 +1,74 @@
+name: New Design Submission
+description: Submit a new team background design
+labels: ["new design"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want to contribute a new design? Great! Please follow the requirements below before submitting.
+
+        **Template files:**
+        - [template.af](https://github.com/AlienPixl/lego-f1-ikea-frame-generator/raw/main/assets/templates/template.af) — Affinity Designer source
+        - [template.pdf](https://github.com/AlienPixl/lego-f1-ikea-frame-generator/raw/main/assets/templates/template.pdf) — PDF template
+
+        **Design requirements:**
+        - Print size: 12.5 × 25 cm (per slot) + **5 mm bleed on all sides**
+        - Color mode: CMYK
+        - Resolution: 300 DPI minimum
+
+        **PDF export settings (Affinity Designer):**
+        - ✅ Include bleed — bleed must be set to **5 mm**
+        - ✅ Include printer's marks
+        - ✅ Include crop marks
+        - ❌ Include registration marks
+        - ❌ Include colour bars
+        - ❌ Include page information
+
+        ![Export settings](https://github.com/AlienPixl/lego-f1-ikea-frame-generator/raw/main/assets/images/export-settings.png)
+
+        **How to submit:**
+        - Pack your PDF and/or Affinity file into a `.zip` archive
+        - Attach the ZIP file to this issue
+
+        > ⚠️ By submitting a design you agree it may be included in the project under the same license. All submitted designs must respect trademark and copyright rules.
+
+  - type: input
+    id: team
+    attributes:
+      label: Team name
+      placeholder: e.g. Scuderia Ferrari
+    validations:
+      required: true
+
+  - type: dropdown
+    id: file-type
+    attributes:
+      label: File type included in ZIP
+      options:
+        - PDF
+        - Affinity Designer (.af)
+        - Both PDF and Affinity Designer
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Design description
+      placeholder: Briefly describe your design — colors, style, any special elements
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: File is packed in a ZIP archive and attached to this issue
+          required: true
+        - label: Design is 12.5 × 25 cm with 5 mm bleed
+          required: true
+        - label: Color mode is CMYK
+          required: true
+        - label: I agree this design may be included in the project under the CC BY-NC-ND 4.0 license
+          required: true

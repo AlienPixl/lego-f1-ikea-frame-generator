@@ -1,0 +1,27 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to improve the app? Let us know!
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What would you like to see?
+      placeholder: Describe your idea clearly
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      placeholder: Is there something that currently doesn't work well for you?
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context or examples

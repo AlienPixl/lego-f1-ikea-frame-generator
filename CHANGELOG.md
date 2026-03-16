@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.1]
+
+### Added
+- Issue templates: Bug Report, Feature Request, New Design Submission
+- Export settings reference image in assets/images
+- Wiki documentation (How to Use, Print & Assembly, Available Teams, Submit a Design)
+
+### Changed
+- README simplified — detailed docs moved to Wiki
+- Teams list moved to Wiki with preview images
+
+---
+
 ## [1.0.0]
 
 ### Added
