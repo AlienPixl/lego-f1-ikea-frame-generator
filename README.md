@@ -2,6 +2,12 @@
 
 A fan-made web app for generating print-ready PDF backgrounds for **LEGO F1 Speed Champions** sets displayed in **IKEA SANNAHED frames**.
 
+<p align="center">
+
+<p align="center">
+  <img src="assets/images/preview.png" alt="Preview of the final product" width="480" style="margin: 0 10px;" />
+</p>
+
 ---
 
 ## 🌐 Web App
