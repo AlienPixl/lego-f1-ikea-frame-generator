@@ -48,9 +48,3 @@ See the [LICENSE](LICENSE) file for details.
 ## 📝 Changelog
 
 See the [CHANGELOG](CHANGELOG.md) file for version history.
-
----
-
-## 1.1.0
-
-- Added new teams and updated team backgrounds.
